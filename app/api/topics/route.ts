@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import OpenAI from "openai";
+import type { Response as OpenAIResponse } from "openai/resources/responses/responses";
 import {
   fallbackTopics,
   hasDenylistedTerm,
@@ -11,7 +12,8 @@ import {
 
 export const runtime = "nodejs";
 
-const MODEL = "gpt-5-mini";
+const MODEL_PRIMARY = "gpt-5-mini";
+const MODEL_FALLBACK = "gpt-4o-mini";
 const RATE_LIMIT_WINDOW_MS = 3000;
 const rateLimitMap = new Map<string, number>();
 
@@ -129,69 +131,92 @@ async function callOpenAI(userPrompt: string): Promise<TopicResponsePayload | nu
     }
   ];
 
-  for (let attempt = 0; attempt < 2; attempt += 1) {
-    try {
-      const response = await getOpenAIClient().responses.create({
-        model: MODEL,
-        input:
-          attempt === 0
-            ? baseInput
-            : [
-                ...baseInput,
-                {
-                  role: "user" as const,
-                  content: [
-                    {
-                      type: "input_text" as const,
-                      text: "Return valid JSON only matching the schema."
-                    }
-                  ]
-                }
-              ],
-        response_format: {
-          type: "json_schema",
-          json_schema: {
-            name: "dinner_topics",
-            schema: {
-              type: "object",
-              properties: {
-                starters: {
-                  type: "array",
-                  items: {
+  const modelsToTry = [MODEL_PRIMARY, MODEL_FALLBACK];
+
+  for (const model of modelsToTry) {
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      try {
+        const response = (await getOpenAIClient().responses.create({
+          model,
+          input:
+            attempt === 0
+              ? baseInput
+              : [
+                  ...baseInput,
+                  {
+                    role: "user" as const,
+                    content: [
+                      {
+                        type: "input_text" as const,
+                        text: "Return valid JSON only matching the schema."
+                      }
+                    ]
+                  }
+                ],
+          response_format: {
+            type: "json_schema",
+            json_schema: {
+              name: "dinner_topics",
+              schema: {
+                type: "object",
+                properties: {
+                  starters: {
+                    type: "array",
+                    items: {
+                      type: "string",
+                      minLength: 1
+                    },
+                    minItems: 3,
+                    maxItems: 3
+                  },
+                  fact: {
                     type: "string",
                     minLength: 1
-                  },
-                  minItems: 3,
-                  maxItems: 3
+                  }
                 },
-                fact: {
-                  type: "string",
-                  minLength: 1
-                }
+                required: ["starters", "fact"],
+                additionalProperties: false
               },
-              required: ["starters", "fact"],
-              additionalProperties: false
-            },
-            strict: true
+              strict: true
+            }
           }
+        } as any)) as unknown as OpenAIResponse;
+
+        const textPayload = extractResponseText(response);
+        if (!textPayload) {
+          continue;
         }
-      } as any);
 
-      const outputText = response.output_text;
+        try {
+          const parsed = JSON.parse(textPayload) as TopicResponsePayload;
+          const sanitized = sanitizeResponse(parsed);
 
-      try {
-        const parsed = JSON.parse(outputText) as TopicResponsePayload;
-        const sanitized = sanitizeResponse(parsed);
-
-        if (sanitized) {
-          return sanitized;
+          if (sanitized) {
+            return sanitized;
+          }
+        } catch (error) {
+          console.warn("Failed to parse OpenAI response", error);
         }
       } catch (error) {
-        console.warn("Failed to parse OpenAI response", error);
+        console.warn("OpenAI request failed", { model, error });
+        break;
       }
-    } catch (error) {
-      console.warn("OpenAI request failed", error);
     }
+  }
+
+  return null;
+}
+
+function extractResponseText(response: OpenAIResponse): string | null {
+  const firstOutput = response.output?.[0] as { content?: Array<{ text?: string }> } | undefined;
+  const firstContent = firstOutput?.content?.[0];
+  if (firstContent && typeof firstContent.text === "string" && firstContent.text.length > 0) {
+    return firstContent.text;
+  }
+
+  const maybeOutputText = (response as { output_text?: string }).output_text;
+  if (typeof maybeOutputText === "string" && maybeOutputText.length > 0) {
+    return maybeOutputText;
   }
 
   return null;
