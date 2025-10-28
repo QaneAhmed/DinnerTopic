@@ -36,10 +36,10 @@ function describeError(error: unknown): SerializableError {
       name: error.name,
       message: error.message,
       stack: error.stack,
-      status: error.status,
-      code: error.code,
-      type: error.type,
-      param: error.param,
+      status: error.status ?? undefined,
+      code: error.code ?? undefined,
+      type: error.type ?? undefined,
+      param: error.param ?? undefined,
       details: error.error,
     };
   }
