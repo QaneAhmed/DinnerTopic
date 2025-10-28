@@ -5,6 +5,7 @@ import {
   fallbackTopics,
   hasDenylistedTerm,
   topicRequestSchema,
+  type Mode,
   type TopicRequest,
   type TopicResponsePayload,
   type Vibe
@@ -146,7 +147,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(payload, { status: 200 });
   } catch (error) {
     console.error("Falling back to canned topics", error);
-    const fallback = fallbackTopics[data.vibe as Vibe];
+    const fallback = fallbackTopics[data.mode][data.vibe as Vibe];
     return NextResponse.json(fallback, { status: 200 });
   }
 }
@@ -189,6 +190,7 @@ function buildCacheKey(payload: TopicRequest): string {
     people: payload.people,
     dietary:
       payload.dietaryOrIngredient?.trim().toLowerCase() ?? "__none__",
+    mode: payload.mode
   });
 }
 
@@ -219,7 +221,7 @@ async function generateTopics(payload: TopicRequest): Promise<TopicResponsePaylo
     return cached;
   }
 
-  const response = await callOpenAI(userPrompt);
+  const response = await callOpenAI(userPrompt, payload.mode);
 
   if (response) {
     setCachedTopics(cacheKey, response);
@@ -229,12 +231,15 @@ async function generateTopics(payload: TopicRequest): Promise<TopicResponsePaylo
   throw new Error("Unable to generate valid topics");
 }
 
-async function callOpenAI(userPrompt: string): Promise<TopicResponsePayload | null> {
-  const baseInput = buildBaseInput(userPrompt);
+async function callOpenAI(
+  userPrompt: string,
+  mode: Mode
+): Promise<TopicResponsePayload | null> {
+  const baseInput = buildBaseInput(userPrompt, mode);
   const modelsToTry = [MODEL_PRIMARY, MODEL_FALLBACK];
 
   for (const model of modelsToTry) {
-    const outcome = await tryModel(model, baseInput, userPrompt);
+    const outcome = await tryModel(model, baseInput, userPrompt, mode);
 
     if (outcome.kind === "success") {
       return outcome.data;
@@ -253,15 +258,19 @@ type ModelAttemptOutcome =
   | { kind: "retryable" }
   | { kind: "nonretryable" };
 
-function buildBaseInput(userPrompt: string) {
+function buildBaseInput(userPrompt: string, mode: Mode) {
+  const systemPrompt =
+    mode === "evil"
+      ? "You are a sinister dinner host who delights in macabre, horror-leaning conversation starters and chilling facts. Keep responses spine-tingling yet respectful: no slurs, no real-world hate speech, no encouragement of harm. Blend atmospheric dread, ghost stories, and eerie folklore while remaining concise and clever."
+      : "You are a witty, wholesome dinner host assistant. You craft short, inclusive conversation starters tailored to the group vibe and size, plus one fun food fact linked to any supplied dietary style or ingredient. Keep everything family-friendly, practical, and culturally respectful. Inject gentle variety and avoid repeating earlier phrasings, even when the context stays the same.";
+
   return [
     {
       role: "system" as const,
       content: [
         {
           type: "input_text" as const,
-          text:
-            "You are a witty, wholesome dinner host assistant. You craft short, inclusive conversation starters tailored to the group vibe and size, plus one fun food fact linked to any supplied dietary style or ingredient. Keep everything family-friendly, practical, and culturally respectful. Inject gentle variety and avoid repeating earlier phrasings, even when the context stays the same.",
+          text: systemPrompt,
         },
       ],
     },
@@ -276,6 +285,7 @@ async function tryModel(
   model: string,
   baseInput: ReturnType<typeof buildBaseInput>,
   userPrompt: string,
+  mode: Mode,
 ): Promise<ModelAttemptOutcome> {
   try {
     const response = (await getOpenAIClient().responses.create({
@@ -307,7 +317,7 @@ async function tryModel(
 
     const textPayload = extractResponseText(response);
     if (!textPayload) {
-      console.warn("Empty OpenAI response payload", { model });
+      console.warn("Empty OpenAI response payload", { model, mode });
       return { kind: "retryable" };
     }
 
@@ -319,7 +329,7 @@ async function tryModel(
         return { kind: "success", data: sanitized };
       }
 
-      console.warn("OpenAI response failed sanitization", { model, parsed });
+      console.warn("OpenAI response failed sanitization", { model, mode, parsed });
       return { kind: "retryable" };
     } catch (error) {
       console.warn("Failed to parse OpenAI response", error);
@@ -328,6 +338,7 @@ async function tryModel(
   } catch (error) {
     logOpenAIError("request failed", error, {
       model,
+      mode,
       promptPreview: userPrompt.slice(0, 160),
     });
 
@@ -371,8 +382,31 @@ function extractResponseText(response: OpenAIResponse): string | null {
 function buildUserPrompt(payload: TopicRequest): string {
   const dietary = payload.dietaryOrIngredient ?? "none";
 
+  if (payload.mode === "evil") {
+    return [
+      "Craft 3 chilling conversation starters and 1 unsettling dinner fact.",
+      "",
+      "Context:",
+      `- Vibe: ${payload.vibe}`,
+      `- People: ${payload.people}`,
+      `- Dietary or Ingredient (optional): ${dietary}`,
+      "",
+      "Constraints:",
+      "- Each starter: one or two sentences max, eerie, suspenseful, dripping with dark humor or dread.",
+      "- Keep content PG-13 creepy: no slurs, no glorifying real-world violence, no explicit gore.",
+      "- Reference hauntings, uncanny folklore, cursed objects, or unsettling what-ifs.",
+      "- Maintain the provided vibe (Family, Friends, etc.) while making everyone squirm politely.",
+      "- If dietary/ingredient is given, weave it into at least one starter in a sinister way.",
+      "- Fact: one sentence, rooted in real history or legend, spooky yet plausible.",
+      "- Vary the angle of each starter so they feel distinct.",
+      "",
+      "Output EXACTLY in JSON with keys:",
+      '{ "starters": ["...", "...", "..."], "fact": "..." }'
+    ].join("\n");
+  }
+
   return [
-    "Create 3 short conversation starters and 1 fun food fact for a dinner.",
+      "Create 3 short conversation starters and 1 fun food fact for a dinner.",
     "",
     "Context:",
     `- Vibe: ${payload.vibe}`,
