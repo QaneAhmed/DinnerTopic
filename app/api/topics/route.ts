@@ -28,10 +28,37 @@ type SerializableError = {
   type?: string;
   param?: string;
   details?: unknown;
+  requestId?: string;
+  headers?: Record<string, string>;
 };
 
 function describeError(error: unknown): SerializableError {
   if (error instanceof OpenAI.APIError) {
+    let headers: Record<string, string> | undefined;
+
+    const rawHeaders = (error.headers ?? null) as unknown;
+
+    if (
+      rawHeaders &&
+      typeof (rawHeaders as { forEach?: unknown }).forEach === "function"
+    ) {
+      headers = {};
+      (rawHeaders as Headers).forEach((value: string, key: string) => {
+        headers![key.toLowerCase()] = value;
+      });
+    } else if (rawHeaders && typeof rawHeaders === "object") {
+      headers = Object.entries(rawHeaders as Record<string, string>).reduce<
+        Record<string, string>
+      >((acc, [key, value]) => {
+        acc[key.toLowerCase()] = value;
+        return acc;
+      }, {});
+    }
+
+    const requestId =
+      (headers && (headers["x-request-id"] ?? headers["openai-request-id"])) ||
+      undefined;
+
     return {
       name: error.name,
       message: error.message,
@@ -41,6 +68,8 @@ function describeError(error: unknown): SerializableError {
       type: error.type ?? undefined,
       param: error.param ?? undefined,
       details: error.error,
+      requestId,
+      headers,
     };
   }
 
