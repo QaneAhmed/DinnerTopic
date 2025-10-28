@@ -158,6 +158,7 @@ async function callOpenAI(userPrompt: string): Promise<TopicResponsePayload | nu
                 ],
           text: {
             format: {
+              name: "dinner_topics_json",
               type: "json_schema",
               json_schema: {
                 name: "dinner_topics",
