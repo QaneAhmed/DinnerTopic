@@ -185,8 +185,6 @@ async function callOpenAI(userPrompt: string): Promise<TopicResponsePayload | nu
       try {
         const response = (await getOpenAIClient().responses.create({
           model,
-          temperature: 0.9,
-          top_p: 0.9,
           max_output_tokens: 600,
           input:
             attempt === 0
