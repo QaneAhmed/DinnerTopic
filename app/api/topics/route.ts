@@ -156,31 +156,27 @@ async function callOpenAI(userPrompt: string): Promise<TopicResponsePayload | nu
                     ]
                   }
                 ],
-          response_format: {
-            type: "json_schema",
-            json_schema: {
-              name: "dinner_topics",
-              schema: {
-                type: "object",
-                properties: {
-                  starters: {
-                    type: "array",
-                    items: {
-                      type: "string",
-                      minLength: 1
+          text: {
+            format: {
+              type: "json_schema",
+              json_schema: {
+                name: "dinner_topics",
+                schema: {
+                  type: "object",
+                  properties: {
+                    starters: {
+                      type: "array",
+                      items: { type: "string", minLength: 1 },
+                      minItems: 3,
+                      maxItems: 3
                     },
-                    minItems: 3,
-                    maxItems: 3
+                    fact: { type: "string", minLength: 1 }
                   },
-                  fact: {
-                    type: "string",
-                    minLength: 1
-                  }
+                  required: ["starters", "fact"],
+                  additionalProperties: false
                 },
-                required: ["starters", "fact"],
-                additionalProperties: false
-              },
-              strict: true
+                strict: true
+              }
             }
           }
         } as any)) as unknown as OpenAIResponse;
