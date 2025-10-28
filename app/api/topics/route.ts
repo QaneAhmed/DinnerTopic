@@ -121,7 +121,7 @@ async function callOpenAI(userPrompt: string): Promise<TopicResponsePayload | nu
         {
           type: "input_text" as const,
           text:
-            "You are a witty, wholesome dinner host assistant. You craft short, inclusive conversation starters tailored to the group vibe and size, plus one fun food fact linked to any supplied dietary style or ingredient. Keep everything family-friendly, practical, and culturally respectful."
+            "You are a witty, wholesome dinner host assistant. You craft short, inclusive conversation starters tailored to the group vibe and size, plus one fun food fact linked to any supplied dietary style or ingredient. Keep everything family-friendly, practical, and culturally respectful. Inject gentle variety and avoid repeating earlier phrasings, even when the context stays the same."
         }
       ]
     },
@@ -138,6 +138,9 @@ async function callOpenAI(userPrompt: string): Promise<TopicResponsePayload | nu
       try {
         const response = (await getOpenAIClient().responses.create({
           model,
+          temperature: 0.9,
+          top_p: 0.9,
+          max_output_tokens: 600,
           input:
             attempt === 0
               ? baseInput
@@ -241,6 +244,7 @@ function buildUserPrompt(payload: TopicRequest): string {
     "- If a dietary/ingredient is provided: weave it naturally into at least one starter.",
     "- Food fact: one sentence, true, non-controversial, tied to the dietary/ingredient if provided; otherwise a general culinary fact.",
     "- Absolutely no recipes, no medical/nutritional claims beyond widely accepted facts, no judgments.",
+    "- Make each set feel fresh—vary phrasing and details across different requests, even if the context repeats.",
     "",
     "Output EXACTLY in JSON with keys:",
     '{ "starters": ["...", "...", "..."], "fact": "..." }'
