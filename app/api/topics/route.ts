@@ -12,10 +12,16 @@ import {
 
 export const runtime = "nodejs";
 
-const MODEL_PRIMARY = "gpt-5-mini";
-const MODEL_FALLBACK = "gpt-4o-mini";
+const MODEL_PRIMARY = "gpt-4o-mini";
+const MODEL_FALLBACK = "gpt-5-mini";
 const RATE_LIMIT_WINDOW_MS = 3000;
 const rateLimitMap = new Map<string, number>();
+const CACHE_TTL_MS = 1000 * 60 * 15; // 15 minutes
+const topicCache = new Map<
+  string,
+  { expiresAt: number; data: TopicResponsePayload }
+>();
+const MAX_OUTPUT_TOKENS = 450;
 
 let openaiClient: OpenAI | null = null;
 
@@ -177,12 +183,46 @@ function isRateLimited(id: string): boolean {
   return false;
 }
 
+function buildCacheKey(payload: TopicRequest): string {
+  return JSON.stringify({
+    vibe: payload.vibe,
+    people: payload.people,
+    dietary:
+      payload.dietaryOrIngredient?.trim().toLowerCase() ?? "__none__",
+  });
+}
+
+function getCachedTopics(key: string): TopicResponsePayload | null {
+  const entry = topicCache.get(key);
+  if (!entry) {
+    return null;
+  }
+
+  if (Date.now() > entry.expiresAt) {
+    topicCache.delete(key);
+    return null;
+  }
+
+  return entry.data;
+}
+
+function setCachedTopics(key: string, data: TopicResponsePayload) {
+  topicCache.set(key, { expiresAt: Date.now() + CACHE_TTL_MS, data });
+}
+
 async function generateTopics(payload: TopicRequest): Promise<TopicResponsePayload> {
   const userPrompt = buildUserPrompt(payload);
+  const cacheKey = buildCacheKey(payload);
+
+  const cached = getCachedTopics(cacheKey);
+  if (cached) {
+    return cached;
+  }
 
   const response = await callOpenAI(userPrompt);
 
   if (response) {
+    setCachedTopics(cacheKey, response);
     return response;
   }
 
@@ -190,96 +230,127 @@ async function generateTopics(payload: TopicRequest): Promise<TopicResponsePaylo
 }
 
 async function callOpenAI(userPrompt: string): Promise<TopicResponsePayload | null> {
-  const baseInput = [
+  const baseInput = buildBaseInput(userPrompt);
+  const modelsToTry = [MODEL_PRIMARY, MODEL_FALLBACK];
+
+  for (const model of modelsToTry) {
+    const outcome = await tryModel(model, baseInput, userPrompt);
+
+    if (outcome.kind === "success") {
+      return outcome.data;
+    }
+
+    if (outcome.kind === "nonretryable") {
+      break;
+    }
+  }
+
+  return null;
+}
+
+type ModelAttemptOutcome =
+  | { kind: "success"; data: TopicResponsePayload }
+  | { kind: "retryable" }
+  | { kind: "nonretryable" };
+
+function buildBaseInput(userPrompt: string) {
+  return [
     {
       role: "system" as const,
       content: [
         {
           type: "input_text" as const,
           text:
-            "You are a witty, wholesome dinner host assistant. You craft short, inclusive conversation starters tailored to the group vibe and size, plus one fun food fact linked to any supplied dietary style or ingredient. Keep everything family-friendly, practical, and culturally respectful. Inject gentle variety and avoid repeating earlier phrasings, even when the context stays the same."
-        }
-      ]
+            "You are a witty, wholesome dinner host assistant. You craft short, inclusive conversation starters tailored to the group vibe and size, plus one fun food fact linked to any supplied dietary style or ingredient. Keep everything family-friendly, practical, and culturally respectful. Inject gentle variety and avoid repeating earlier phrasings, even when the context stays the same.",
+        },
+      ],
     },
     {
       role: "user" as const,
-      content: [{ type: "input_text" as const, text: userPrompt }]
-    }
+      content: [{ type: "input_text" as const, text: userPrompt }],
+    },
   ];
+}
 
-  const modelsToTry = [MODEL_PRIMARY, MODEL_FALLBACK];
-
-  for (const model of modelsToTry) {
-    for (let attempt = 0; attempt < 2; attempt += 1) {
-      try {
-        const response = (await getOpenAIClient().responses.create({
-          model,
-          max_output_tokens: 600,
-          input:
-            attempt === 0
-              ? baseInput
-              : [
-                  ...baseInput,
-                  {
-                    role: "user" as const,
-                    content: [
-                      {
-                        type: "input_text" as const,
-                        text: "Return valid JSON only matching the schema."
-                      }
-                    ]
-                  }
-                ],
-          text: {
-            format: {
-              name: "dinner_topics_json",
-              type: "json_schema",
-              schema: {
-                type: "object",
-                properties: {
-                  starters: {
-                    type: "array",
-                    items: { type: "string", minLength: 1 },
-                    minItems: 3,
-                    maxItems: 3
-                  },
-                  fact: { type: "string", minLength: 1 }
-                },
-                required: ["starters", "fact"],
-                additionalProperties: false
+async function tryModel(
+  model: string,
+  baseInput: ReturnType<typeof buildBaseInput>,
+  userPrompt: string,
+): Promise<ModelAttemptOutcome> {
+  try {
+    const response = (await getOpenAIClient().responses.create({
+      model,
+      max_output_tokens: MAX_OUTPUT_TOKENS,
+      input: baseInput,
+      text: {
+        format: {
+          name: "dinner_topics_json",
+          type: "json_schema",
+          schema: {
+            type: "object",
+            properties: {
+              starters: {
+                type: "array",
+                items: { type: "string", minLength: 1 },
+                minItems: 3,
+                maxItems: 3,
               },
-              strict: true
-            }
-          }
-        } as any)) as unknown as OpenAIResponse;
+              fact: { type: "string", minLength: 1 },
+            },
+            required: ["starters", "fact"],
+            additionalProperties: false,
+          },
+          strict: true,
+        },
+      },
+    })) as unknown as OpenAIResponse;
 
-        const textPayload = extractResponseText(response);
-        if (!textPayload) {
-          continue;
-        }
+    const textPayload = extractResponseText(response);
+    if (!textPayload) {
+      console.warn("Empty OpenAI response payload", { model });
+      return { kind: "retryable" };
+    }
 
-        try {
-          const parsed = JSON.parse(textPayload) as TopicResponsePayload;
-          const sanitized = sanitizeResponse(parsed);
+    try {
+      const parsed = JSON.parse(textPayload) as TopicResponsePayload;
+      const sanitized = sanitizeResponse(parsed);
 
-          if (sanitized) {
-            return sanitized;
-          }
-        } catch (error) {
-          console.warn("Failed to parse OpenAI response", error);
-        }
-      } catch (error) {
-        logOpenAIError("request failed", error, {
-          model,
-          attempt,
-          promptPreview: userPrompt.slice(0, 160),
-        });
-        break;
+      if (sanitized) {
+        return { kind: "success", data: sanitized };
+      }
+
+      console.warn("OpenAI response failed sanitization", { model, parsed });
+      return { kind: "retryable" };
+    } catch (error) {
+      console.warn("Failed to parse OpenAI response", error);
+      return { kind: "retryable" };
+    }
+  } catch (error) {
+    logOpenAIError("request failed", error, {
+      model,
+      promptPreview: userPrompt.slice(0, 160),
+    });
+
+    if (error instanceof OpenAI.APIError) {
+      if (
+        error.status === 429 ||
+        error.code === "insufficient_quota" ||
+        error.code === "rate_limit_exceeded" ||
+        error.type === "insufficient_quota" ||
+        error.type === "tokens" ||
+        error.type === "requests" ||
+        (typeof error.status === "number" && error.status >= 500)
+      ) {
+        return { kind: "retryable" };
       }
     }
-  }
 
-  return null;
+    if (error instanceof Error && error.message.includes("Connection error")) {
+      return { kind: "retryable" };
+    }
+
+    return { kind: "nonretryable" };
+  }
 }
 
 function extractResponseText(response: OpenAIResponse): string | null {
