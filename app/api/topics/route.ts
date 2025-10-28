@@ -19,6 +19,53 @@ const rateLimitMap = new Map<string, number>();
 
 let openaiClient: OpenAI | null = null;
 
+type SerializableError = {
+  name: string;
+  message: string;
+  stack?: string;
+  status?: number;
+  code?: string;
+  type?: string;
+  param?: string;
+  details?: unknown;
+};
+
+function describeError(error: unknown): SerializableError {
+  if (error instanceof OpenAI.APIError) {
+    return {
+      name: error.name,
+      message: error.message,
+      stack: error.stack,
+      status: error.status,
+      code: error.code,
+      type: error.type,
+      param: error.param,
+      details: error.error,
+    };
+  }
+
+  if (error instanceof Error) {
+    return {
+      name: error.name,
+      message: error.message,
+      stack: error.stack,
+    };
+  }
+
+  return {
+    name: "UnknownError",
+    message: typeof error === "string" ? error : JSON.stringify(error),
+  };
+}
+
+function logOpenAIError(context: string, error: unknown, metadata?: Record<string, unknown>) {
+  const base = describeError(error);
+  console.error(`[OpenAI] ${context}`, {
+    ...metadata,
+    error: base,
+  });
+}
+
 export async function POST(req: NextRequest) {
   if (!process.env.OPENAI_API_KEY) {
     console.error("OPENAI_API_KEY is not set");
@@ -160,7 +207,7 @@ async function callOpenAI(userPrompt: string): Promise<TopicResponsePayload | nu
             format: {
               name: "dinner_topics_json",
               type: "json_schema",
-              json_schema: {
+              schema: {
                 name: "dinner_topics",
                 schema: {
                   type: "object",
@@ -198,7 +245,11 @@ async function callOpenAI(userPrompt: string): Promise<TopicResponsePayload | nu
           console.warn("Failed to parse OpenAI response", error);
         }
       } catch (error) {
-        console.warn("OpenAI request failed", { model, error });
+        logOpenAIError("request failed", error, {
+          model,
+          attempt,
+          promptPreview: userPrompt.slice(0, 160),
+        });
         break;
       }
     }
