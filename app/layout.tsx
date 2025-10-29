@@ -2,15 +2,18 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Dinner Topic Generator — End awkward silences",
+  title: "SupperTalk — Recipes with Conversation Starters",
   description:
-    "Craft three tailored conversation starters and a fun food fact in seconds. Perfect for any dinner vibe."
+    "Search recipes, plan dinner, and get conversation sparks with SupperTalk. Built for warm, inclusive gatherings.",
+  icons: {
+    icon: "/favicon.ico"
+  }
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#f6a76e"
+  themeColor: "#312e81"
 };
 
 type RootLayoutProps = {
@@ -19,9 +22,11 @@ type RootLayoutProps = {
 
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
-    <html lang="en">
-      <body className="min-h-dvh bg-white text-neutral-900 antialiased">
-        <div className="max-w-xl mx-auto px-4 py-10">{children}</div>
+    <html lang="en" className="min-h-full bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+      <body className="min-h-screen bg-gradient-to-b from-slate-50/80 via-white to-slate-100/60 font-sans antialiased dark:from-slate-950 dark:via-slate-950 dark:to-slate-900">
+        <div className="mx-auto flex min-h-screen max-w-6xl flex-col gap-10 px-4 py-10 sm:px-6 lg:px-10">
+          {children}
+        </div>
       </body>
     </html>
   );

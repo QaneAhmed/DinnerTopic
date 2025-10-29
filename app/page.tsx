@@ -1,342 +1,142 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
-import clsx from "clsx";
-import { ResultCard } from "@/components/ResultCard";
-import {
-  VIBES,
-  type TopicRequest,
-  type TopicResponsePayload,
-  hasDenylistedTerm,
-  topicRequestSchema
-} from "@/lib/topics";
+import { useMemo, useState } from "react";
+import useSWR from "swr";
+import { SearchForm, type SearchFilters } from "@/components/SearchForm";
+import { RecipeGrid } from "@/components/RecipeGrid";
+import { RecipeDrawer } from "@/components/RecipeDrawer";
+import type { RecipeSummary } from "@/types/recipe";
 
-type RequestStatus = "idle" | "loading" | "error" | "success";
+const defaultFilters: SearchFilters = {
+  vibe: "Friends",
+  people: 2,
+  diets: [],
+  query: "",
+  have: "",
+  exclude: ""
+};
 
-const initialFormState = {
-  vibe: "",
-  people: "4",
-  dietaryOrIngredient: ""
+const SURPRISE_PRESETS = [
+  "crispy seasonal veggies",
+  "cozy one-pot stew",
+  "bright citrus seafood",
+  "late-night noodles",
+  "date night pasta",
+  "family-style tray bake",
+  "vegan comfort"
+];
+
+type SearchResponse = {
+  results: RecipeSummary[];
+};
+
+const fetcher = async (url: string): Promise<SearchResponse> => {
+  const res = await fetch(url);
+  if (!res.ok) {
+    throw new Error(`Search failed: ${res.status}`);
+  }
+  return res.json();
 };
 
 export default function HomePage() {
-  const [formState, setFormState] = useState(initialFormState);
-  const [status, setStatus] = useState<RequestStatus>("idle");
-  const [result, setResult] = useState<TopicResponsePayload | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [evilMode, setEvilMode] = useState(false);
+  const [filters, setFilters] = useState<SearchFilters>(defaultFilters);
+  const [submitted, setSubmitted] = useState<SearchFilters>(defaultFilters);
+  const [selectedRecipe, setSelectedRecipe] = useState<RecipeSummary | null>(null);
 
-  const mode = evilMode ? "evil" : "standard";
+  const searchKey = useMemo(() => buildSearchKey(submitted), [submitted]);
 
-  const updateForm = (partial: Partial<typeof initialFormState>) => {
-    setFormState((prev) => ({ ...prev, ...partial }));
-    if (error) {
-      setError(null);
-    }
-    if (status === "error") {
-      setStatus("idle");
-    }
+  const { data, error, isLoading } = useSWR<SearchResponse>(searchKey, fetcher, {
+    revalidateOnFocus: false
+  });
+
+  const results = data?.results ?? [];
+
+  const handleSubmit = (next: SearchFilters) => {
+    setFilters(next);
+    setSubmitted(next);
+    setSelectedRecipe(null);
   };
 
-  const toggleMode = () => {
-    setEvilMode((previous) => {
-      const next = !previous;
-      setResult(null);
-      setStatus("idle");
-      setError(null);
-      return next;
-    });
-  };
-
-  const isLoading = status === "loading";
-
-  const canSubmit = useMemo(() => {
-    const peopleNumber = Number(formState.people);
-    const vibeValid = VIBES.includes(formState.vibe as (typeof VIBES)[number]);
-    const peopleValid =
-      Number.isInteger(peopleNumber) && peopleNumber >= 2 && peopleNumber <= 12;
-    return !isLoading && vibeValid && peopleValid;
-  }, [formState.people, formState.vibe, isLoading]);
-
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    const payload = toRequestPayload(formState, mode);
-    const parsed = topicRequestSchema.safeParse(payload);
-
-    if (!parsed.success) {
-      setError("We spilled the soup. Try again?");
-      setStatus("error");
-      return;
-    }
-
-    if (hasDenylistedTerm(parsed.data.dietaryOrIngredient)) {
-      setError("We spilled the soup. Try again?");
-      setStatus("error");
-      return;
-    }
-
-    setStatus("loading");
-    setError(null);
-
-    try {
-      const response = await fetch("/api/topics", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(parsed.data)
-      });
-
-      if (!response.ok) {
-        throw new Error(`Request failed with ${response.status}`);
-      }
-
-      const data = (await response.json()) as TopicResponsePayload;
-
-      if (!Array.isArray(data.starters) || data.starters.length !== 3 || !data.fact) {
-        throw new Error("Invalid payload");
-      }
-
-      setResult(data);
-      setStatus("success");
-    } catch (err) {
-      console.error(err);
-      setError("We spilled the soup. Try again?");
-      setStatus("error");
-    }
-  };
-
-  const resetResult = () => {
-    setResult(null);
-    setStatus("idle");
-    setError(null);
+  const handleSurprise = (source: SearchFilters = filters) => {
+    const pantry = toList(source.have);
+    const baseQuery = pantry.length
+      ? `${pantry[0]} recipe`
+      : SURPRISE_PRESETS[Math.floor(Math.random() * SURPRISE_PRESETS.length)];
+    const surpriseFilters = {
+      ...source,
+      query: baseQuery
+    };
+    setFilters(surpriseFilters);
+    setSubmitted(surpriseFilters);
   };
 
   return (
-    <main
-      className={clsx(
-        "min-h-screen px-4 py-12 transition-colors duration-300 sm:px-6",
-        evilMode ? "bg-[#050108] text-rose-100" : "bg-[#f9f6ff] text-neutral-900"
-      )}
-    >
-      <div className="mx-auto flex w-full max-w-xl flex-col gap-8">
-        <div className="flex justify-end">
-          <button
-            type="button"
-            onClick={toggleMode}
-            aria-pressed={evilMode}
-            className={clsx(
-              "rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-wide transition",
-              evilMode
-                ? "bg-rose-700 text-rose-50 hover:bg-rose-600"
-                : "bg-neutral-900 text-white hover:bg-neutral-700"
-            )}
-          >
-            {evilMode ? "Go back I am scared" : "Evil mode"}
-          </button>
-        </div>
-
-        <header className="text-center">
-          <h1
-            className={clsx(
-              "text-3xl font-semibold sm:text-4xl",
-              evilMode ? "text-rose-100" : "text-neutral-900"
-            )}
-          >
-            Dinner Topic Generator 🍽️ {evilMode ? "— Evil" : ""}
-          </h1>
-          <p
-            className={clsx(
-              "mt-2 text-sm",
-              evilMode ? "text-rose-200/80" : "text-neutral-600"
-            )}
-          >
-            {evilMode
-              ? "Be sent away from the table in 10 seconds."
-              : "End awkward silences in 10 seconds."}
-          </p>
-        </header>
-
-        <form
-          className={clsx(
-            "space-y-6 rounded-3xl border p-6 shadow-sm transition",
-            evilMode
-              ? "border-rose-900/50 bg-[#14020f]/85 backdrop-blur text-rose-100"
-              : "border-neutral-200 bg-white/80 backdrop-blur text-neutral-800"
-          )}
-          onSubmit={handleSubmit}
-        >
-          <div className="space-y-2">
-            <label
-              className={clsx(
-                "text-sm font-medium",
-                evilMode ? "text-rose-100" : "text-neutral-800"
-              )}
-              htmlFor="vibe"
-            >
-              Vibe
-            </label>
-            <select
-              id="vibe"
-              name="vibe"
-              value={formState.vibe}
-              onChange={(event) => updateForm({ vibe: event.target.value })}
-              disabled={isLoading}
-              className={clsx(
-                "w-full rounded-2xl border px-4 py-3 focus:outline-none focus:ring-2",
-                evilMode
-                  ? "border-rose-900/60 bg-[#1f0717] text-rose-100 focus:ring-rose-500"
-                  : "border-neutral-200 bg-white text-neutral-800 focus:ring-accent"
-              )}
-              required
-            >
-              <option value="" disabled>
-                Choose the vibe
-              </option>
-              {VIBES.map((vibe) => (
-                <option key={vibe} value={vibe}>
-                  {vibe}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="space-y-2">
-            <label
-              className={clsx(
-                "text-sm font-medium",
-                evilMode ? "text-rose-100" : "text-neutral-800"
-              )}
-              htmlFor="people"
-            >
-              How many at the table?
-            </label>
-            <input
-              id="people"
-              name="people"
-              type="number"
-              min={2}
-              max={12}
-              value={formState.people}
-              onChange={(event) => updateForm({ people: event.target.value })}
-              disabled={isLoading}
-              className={clsx(
-                "w-full rounded-2xl border px-4 py-3 focus:outline-none focus:ring-2",
-                evilMode
-                  ? "border-rose-900/60 bg-[#1f0717] text-rose-100 focus:ring-rose-500"
-                  : "border-neutral-200 bg-white text-neutral-800 focus:ring-accent"
-              )}
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label
-              className={clsx(
-                "text-sm font-medium",
-                evilMode ? "text-rose-100" : "text-neutral-800"
-              )}
-              htmlFor="dietary-or-ingredient"
-            >
-              Dietary or Ingredient (optional)
-            </label>
-            <input
-              id="dietary-or-ingredient"
-              name="dietary-or-ingredient"
-              type="text"
-              placeholder="e.g., vegetarian, gluten-free, mushrooms, salmon"
-              value={formState.dietaryOrIngredient}
-              onChange={(event) => updateForm({ dietaryOrIngredient: event.target.value })}
-              disabled={isLoading}
-              maxLength={60}
-              className={clsx(
-                "w-full rounded-2xl border px-4 py-3 focus:outline-none focus:ring-2",
-                evilMode
-                  ? "border-rose-900/60 bg-[#1f0717] text-rose-100 placeholder:text-rose-300/50 focus:ring-rose-500"
-                  : "border-neutral-200 bg-white text-neutral-800 placeholder:text-neutral-400 focus:ring-accent"
-              )}
-            />
-          </div>
-
-          <div className="space-y-3">
-            <button
-              type="submit"
-              className={clsx(
-                "w-full rounded-2xl px-6 py-4 text-base font-semibold text-white transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2",
-                canSubmit
-                  ? evilMode
-                    ? "bg-rose-700 hover:bg-rose-600 focus-visible:outline-rose-500"
-                    : "bg-accent hover:bg-accent-dark focus-visible:outline-accent-dark"
-                  : "cursor-not-allowed opacity-70",
-                evilMode && !canSubmit ? "bg-rose-900/60" : undefined
-              )}
-              disabled={!canSubmit}
-            >
-              {isLoading
-                ? evilMode
-                  ? "Summoning nightmares…"
-                  : "Simmering conversation…"
-                : evilMode
-                  ? "Serve the horrors"
-                  : "Serve the topics"}
-            </button>
-
-            <p
-              className={clsx(
-                "text-center text-xs",
-                evilMode ? "text-rose-200/70" : "text-neutral-500"
-              )}
-            >
-              {evilMode
-                ? "You’ll unleash 3 ghastly starters + 1 sinister fact."
-                : "You’ll get 3 tailored starters + 1 fun food fact."}
-            </p>
-
-            {error && (
-              <p
-                className={clsx(
-                  "text-center text-sm font-medium",
-                  evilMode ? "text-rose-400" : "text-rose-600"
-                )}
-                role="alert"
-              >
-                {evilMode ? "The ritual faltered. Try again?" : "We spilled the soup. Try again?"}
-              </p>
-            )}
-          </div>
-        </form>
-
-        {result && status === "success" ? (
-          <ResultCard
-            starters={result.starters}
-            fact={result.fact}
-            onReset={resetResult}
-            mode={mode}
-          />
-        ) : null}
-
-        <p
-          className={clsx(
-            "mt-4 text-center text-xs",
-            evilMode ? "text-rose-300/60" : "text-neutral-400"
-          )}
-        >
-          {evilMode ? "Bon appétit… if you last." : "Bon appétit, powered by AI."}
+    <main className="flex flex-1 flex-col gap-10">
+      <header className="space-y-3 text-center sm:space-y-4">
+        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-indigo-500 dark:text-indigo-300">
+          SupperTalk
         </p>
-      </div>
+        <h1 className="text-3xl font-semibold text-slate-900 sm:text-4xl dark:text-white">
+          Plan dinner, spark the conversation
+        </h1>
+        <p className="mx-auto max-w-2xl text-sm text-slate-600 dark:text-slate-300">
+          Search recipes by cravings, pantry staples, or dietary needs. Open a dish to get
+          three ready-to-go conversation starters and a fun food fact, all tuned to your vibe.
+        </p>
+      </header>
+
+      <SearchForm
+        value={filters}
+        loading={isLoading}
+        onSubmit={handleSubmit}
+        onSurprise={(current) => handleSurprise(current)}
+      />
+
+      <section className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100">
+            {results.length ? `Showing ${results.length} dishes` : "Browse ideas"}
+          </h2>
+          {submitted.query && (
+            <span className="text-xs font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">
+              Query: {submitted.query}
+            </span>
+          )}
+        </div>
+        <RecipeGrid
+          loading={isLoading}
+          error={error ? "We couldn’t reach the kitchen. Try again shortly." : undefined}
+          results={results}
+          onSelect={setSelectedRecipe}
+        />
+      </section>
+
+      <RecipeDrawer
+        recipeId={selectedRecipe?.id ?? null}
+        open={Boolean(selectedRecipe)}
+        onClose={() => setSelectedRecipe(null)}
+        vibe={submitted.vibe}
+        people={submitted.people}
+      />
     </main>
   );
 }
 
-function toRequestPayload(
-  form: typeof initialFormState,
-  mode: "standard" | "evil"
-): TopicRequest {
-  return {
-    vibe: form.vibe as TopicRequest["vibe"],
-    people: Number(form.people),
-    dietaryOrIngredient: form.dietaryOrIngredient,
-    mode
-  };
+function buildSearchKey(filters: SearchFilters): string {
+  const params = new URLSearchParams();
+  if (filters.query.trim()) params.set("q", filters.query.trim());
+  params.set("people", filters.people.toString());
+  filters.diets.forEach((diet) => params.append("diet", diet));
+  toList(filters.have).forEach((item) => params.append("have", item));
+  toList(filters.exclude).forEach((item) => params.append("exclude", item));
+  const query = params.toString();
+  return `/api/recipes/search${query ? `?${query}` : ""}`;
+}
+
+function toList(value: string): string[] {
+  return value
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .slice(0, 30);
 }

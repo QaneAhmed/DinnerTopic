@@ -1,0 +1,47 @@
+{
+  "dairy_free": {
+    "butter": ["olive oil", "avocado oil"],
+    "cream": ["coconut cream"],
+    "milk": ["oat milk", "almond milk"],
+    "cheddar cheese": ["dairy-free cheddar", "smoked gouda-style slices"],
+    "yogurt": ["coconut yogurt", "soy yogurt"],
+    "parmesan": ["nutritional yeast", "dairy-free parmesan"],
+    "sour cream": ["cashew cream", "coconut yogurt"],
+    "buttermilk": ["oat milk + lemon juice"],
+    "ricotta": ["almond ricotta", "tofu ricotta"],
+    "whipped cream": ["coconut whipped cream"]
+  },
+  "gluten_free": {
+    "soy sauce": ["tamari", "coconut aminos"],
+    "wheat flour": ["rice flour", "cornstarch"],
+    "breadcrumbs": ["crushed rice crackers", "almond meal"],
+    "pasta": ["rice noodles", "chickpea pasta"],
+    "tortilla": ["corn tortilla", "cassava tortilla"],
+    "beer": ["gluten-free beer", "sparkling water"],
+    "panko": ["gluten-free panko", "crushed cornflakes"],
+    "soy sauce packet": ["tamari", "liquid aminos"]
+  },
+  "vegan": {
+    "parmesan": ["nutritional yeast"],
+    "egg": ["flax egg", "chia egg"],
+    "honey": ["maple syrup", "agave nectar"],
+    "butter": ["vegan butter", "olive oil"],
+    "mayonnaise": ["vegan mayo", "blended silken tofu"],
+    "gelatin": ["agar agar", "carrageenan"],
+    "half-and-half": ["oat creamer", "coconut cream"]
+  },
+  "general": {
+    "beef": ["mushrooms", "lentils"],
+    "chicken": ["cauliflower", "chickpeas"],
+    "mayonnaise": ["greek yogurt"],
+    "buttermilk": ["milk + lemon juice"],
+    "heavy cream": ["evaporated milk", "half-and-half"],
+    "white wine": ["vegetable broth", "apple cider vinegar + water"],
+    "brown sugar": ["coconut sugar", "maple syrup"],
+    "ketchup": ["tomato paste + vinegar", "bbq sauce"],
+    "sausages": ["chickpea sausages", "mushroom sausages"],
+    "fish sauce": ["soy sauce", "miso paste + water"],
+    "butter": ["olive oil", "ghee"],
+    "milk": ["evaporated milk", "coconut milk"]
+  }
+}

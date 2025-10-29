@@ -1,0 +1,7 @@
+{
+  "extends": ["next/core-web-vitals"],
+  "ignorePatterns": [".next/**/*", "node_modules/**/*", "public/**/*"],
+  "rules": {
+    "react/react-in-jsx-scope": "off"
+  }
+}
