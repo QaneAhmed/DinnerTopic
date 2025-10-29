@@ -1,4 +1,4 @@
-import substitutionData from "@/data/substitutions.json" assert { type: "json" };
+import substitutionData from "@/data/substitutions.json";
 
 type SubstitutionDataset = Record<string, Record<string, string[]>>;
 

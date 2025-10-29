@@ -1,4 +1,4 @@
-import recipesData from "@/data/recipes.sample.json" assert { type: "json" };
+import recipesData from "@/data/recipes.sample.json";
 import { normalizeDietFilters, matchesDiet, matchesExclusions } from "@/lib/filters";
 import { applyMatchScore, scoreRecipe } from "@/lib/scoring";
 import type { RecipeDetail, RecipeSummary } from "@/types/recipe";

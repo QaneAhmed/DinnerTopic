@@ -120,7 +120,7 @@ export function RecipeDrawer({ recipeId, open, onClose, vibe, people }: RecipeDr
       onClick={onClose}
     >
       <div
-        className="relative mx-auto w-full max-w-4xl rounded-t-3xl border border-slate-200 bg-white shadow-2xl transition dark:border-slate-800 dark:bg-slate-950 sm:rounded-3xl"
+        className="relative mx-auto w-full max-w-4xl overflow-hidden rounded-t-3xl border border-slate-200 bg-white shadow-2xl transition dark:border-slate-800 dark:bg-slate-950 sm:rounded-3xl"
         onClick={(event) => event.stopPropagation()}
       >
         <button
@@ -131,7 +131,7 @@ export function RecipeDrawer({ recipeId, open, onClose, vibe, people }: RecipeDr
         >
           ×
         </button>
-        <div className="grid gap-8 p-6 sm:grid-cols-[minmax(0,1fr)_320px] sm:gap-10 sm:p-10">
+        <div className="grid max-h-[calc(100vh-4rem)] gap-8 overflow-y-auto p-6 sm:grid-cols-[minmax(0,1fr)_320px] sm:gap-10 sm:p-10">
           <div className="space-y-6">
             {isLoading && (
               <div className="space-y-4">
