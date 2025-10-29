@@ -23,6 +23,10 @@ export async function generateTopics(
   payload: TopicsRequestBody
 ): Promise<TopicsResponseBody> {
   if (!client) {
+    console.warn("OpenAI client unavailable; using fallback topics.", {
+      recipeId: payload.recipe.id,
+      vibe: payload.vibe
+    });
     return buildTopicsFallback(payload);
   }
 
@@ -71,7 +75,11 @@ export async function generateTopics(
     const hashes = [...parsed.starters, parsed.fun_fact].map(hashString);
     return { ...parsed, hashes };
   } catch (error) {
-    console.warn("OpenAI topics generation failed", error);
+    console.warn("OpenAI topics generation failed; using fallback.", {
+      error,
+      recipeId: payload.recipe.id,
+      vibe: payload.vibe
+    });
     return buildTopicsFallback(payload);
   }
 }

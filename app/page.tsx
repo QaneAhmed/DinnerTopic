@@ -17,13 +17,15 @@ const defaultFilters: SearchFilters = {
 };
 
 const SURPRISE_PRESETS = [
-  "crispy seasonal veggies",
-  "cozy one-pot stew",
-  "bright citrus seafood",
-  "late-night noodles",
-  "date night pasta",
-  "family-style tray bake",
-  "vegan comfort"
+  "weeknight",
+  "comfort",
+  "seasonal",
+  "spicy",
+  "shareable",
+  "seafood",
+  "bowl",
+  "curry",
+  "noodles"
 ];
 
 type SearchResponse = {

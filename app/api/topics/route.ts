@@ -37,22 +37,22 @@ export async function POST(request: Request) {
     );
   }
 
-  const payload = await request.json().catch(() => null);
-  const parsed = bodySchema.safeParse(payload);
+  const body = await request.json().catch(() => null);
+  const parsed = bodySchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid input" }, { status: 400 });
   }
 
-  try {
-    const payload = {
-      ...parsed.data,
-      recipe: {
-        ...parsed.data.recipe,
-        dietFlags: normalizeDietFilters(parsed.data.recipe.dietFlags)
-      }
-    };
+  const normalizedPayload = {
+    ...parsed.data,
+    recipe: {
+      ...parsed.data.recipe,
+      dietFlags: normalizeDietFilters(parsed.data.recipe.dietFlags)
+    }
+  };
 
-    const topics = await generateTopics(payload);
+  try {
+    const topics = await generateTopics(normalizedPayload);
     return NextResponse.json(
       {
         starters: topics.starters,
@@ -62,7 +62,15 @@ export async function POST(request: Request) {
       { status: 200 }
     );
   } catch (error) {
-    console.error("Topics generation failed", error);
+    console.error("Topics generation failed", {
+      error,
+      payloadSummary: {
+        recipeId: normalizedPayload.recipe.id,
+        vibe: normalizedPayload.vibe,
+        people: normalizedPayload.people,
+        dietFlags: normalizedPayload.recipe.dietFlags
+      }
+    });
     return NextResponse.json({ error: "Something went wrong" }, { status: 500 });
   }
 }

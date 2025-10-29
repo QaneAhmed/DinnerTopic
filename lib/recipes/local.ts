@@ -29,26 +29,40 @@ export class LocalRecipeProvider implements RecipeProvider {
     const dietFilters = normalizeDietFilters(params.diet);
     const have = params.have.map((item) => item.toLowerCase());
     const exclude = params.exclude.map((item) => item.toLowerCase());
+    const queryTokens = q
+      .split(/\s+/)
+      .map((token) => token.trim())
+      .filter(Boolean);
 
-    const filtered = recipes.filter((recipe) => {
+    const matchesQuery = (haystack: string) => {
+      if (!queryTokens.length) return true;
+      return queryTokens.every((token) => haystack.includes(token));
+    };
+
+    const baseFilter = (recipe: RecipeDetail, respectQuery: boolean) => {
       if (dietFilters.length && !matchesDiet(recipe, dietFilters)) {
         return false;
       }
       if (exclude.length && !matchesExclusions(recipe, exclude)) {
         return false;
       }
-      if (!q) return true;
+      if (!q || !respectQuery) return true;
       const haystack = [
         recipe.title,
         recipe.description,
         recipe.cuisine,
         recipe.tags.join(" "),
         recipe.ingredients.join(" ")
-      ]
-        .join(" ")
-        .toLowerCase();
-      return haystack.includes(q);
-    });
+      ].join(" ");
+      return matchesQuery(haystack.toLowerCase());
+    };
+
+    let filtered = recipes.filter((recipe) => baseFilter(recipe, true));
+
+    // If query produced no hits, relax the search to surface useful dishes.
+    if (!filtered.length && q) {
+      filtered = recipes.filter((recipe) => baseFilter(recipe, false));
+    }
 
     const scored = filtered.map((recipe) => {
       const score = scoreRecipe({
