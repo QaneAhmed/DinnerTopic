@@ -8,12 +8,9 @@ import { RecipeDrawer } from "@/components/RecipeDrawer";
 import type { RecipeSummary } from "@/types/recipe";
 
 const defaultFilters: SearchFilters = {
-  vibe: "Friends",
-  people: 2,
   diets: [],
   query: "",
-  have: "",
-  exclude: ""
+  have: ""
 };
 
 const SURPRISE_PRESETS = [
@@ -117,8 +114,6 @@ export default function HomePage() {
         recipeId={selectedRecipe?.id ?? null}
         open={Boolean(selectedRecipe)}
         onClose={() => setSelectedRecipe(null)}
-        vibe={submitted.vibe}
-        people={submitted.people}
       />
     </main>
   );
@@ -127,10 +122,8 @@ export default function HomePage() {
 function buildSearchKey(filters: SearchFilters): string {
   const params = new URLSearchParams();
   if (filters.query.trim()) params.set("q", filters.query.trim());
-  params.set("people", filters.people.toString());
   filters.diets.forEach((diet) => params.append("diet", diet));
   toList(filters.have).forEach((item) => params.append("have", item));
-  toList(filters.exclude).forEach((item) => params.append("exclude", item));
   const query = params.toString();
   return `/api/recipes/search${query ? `?${query}` : ""}`;
 }

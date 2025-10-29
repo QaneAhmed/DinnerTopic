@@ -10,8 +10,6 @@ type RecipeDrawerProps = {
   recipeId: string | null;
   open: boolean;
   onClose: () => void;
-  vibe: string;
-  people: number;
 };
 
 type RecipeResponse = {
@@ -26,7 +24,10 @@ const fetcher = async (url: string): Promise<RecipeResponse> => {
   return res.json();
 };
 
-export function RecipeDrawer({ recipeId, open, onClose, vibe, people }: RecipeDrawerProps) {
+const DEFAULT_VIBE = "Friends";
+const DEFAULT_PEOPLE = 4;
+
+export function RecipeDrawer({ recipeId, open, onClose }: RecipeDrawerProps) {
   const { data, error, isLoading } = useSWR<RecipeResponse>(
     open && recipeId ? `/api/recipes/${encodeURIComponent(recipeId)}` : null,
     fetcher,
@@ -58,8 +59,8 @@ export function RecipeDrawer({ recipeId, open, onClose, vibe, people }: RecipeDr
           },
           body: JSON.stringify({
             recipe,
-            vibe,
-            people,
+            vibe: DEFAULT_VIBE,
+            people: DEFAULT_PEOPLE,
             previousHashes: resetHashes ? [] : hashesRef.current
           })
         });
@@ -84,7 +85,7 @@ export function RecipeDrawer({ recipeId, open, onClose, vibe, people }: RecipeDr
         setTopicsLoading(false);
       }
     },
-    [recipe, vibe, people]
+    [recipe]
   );
 
   useEffect(() => {
@@ -100,7 +101,7 @@ export function RecipeDrawer({ recipeId, open, onClose, vibe, people }: RecipeDr
     if (open && recipe) {
       loadTopics(true);
     }
-  }, [open, recipe, vibe, people, loadTopics]);
+  }, [open, recipe, loadTopics]);
 
   useEffect(() => {
     const handleKey = (event: KeyboardEvent) => {

@@ -4,15 +4,11 @@ import { FormEvent, useEffect, useId, useState } from "react";
 import clsx from "clsx";
 
 export type SearchFilters = {
-  vibe: string;
-  people: number;
   diets: string[];
   query: string;
   have: string;
-  exclude: string;
 };
 
-const VIBES = ["Friends", "Family", "Date", "Kids", "Colleagues"] as const;
 const DIET_OPTIONS = [
   "Vegetarian",
   "Vegan",
@@ -38,12 +34,9 @@ export function SearchForm({
   onSurprise
 }: SearchFormProps) {
   const [formState, setFormState] = useState<SearchFilters>(value);
-  const vibeId = useId();
-  const peopleId = useId();
   const dietsId = useId();
   const queryId = useId();
   const haveId = useId();
-  const excludeId = useId();
 
   useEffect(() => {
     setFormState(value);
@@ -72,49 +65,6 @@ export function SearchForm({
       className="rounded-3xl border border-slate-200 bg-white/80 p-6 shadow-sm backdrop-blur-md transition-all dark:border-slate-800 dark:bg-slate-900/80"
     >
       <div className="grid gap-5">
-        <div className="grid gap-2">
-          <label htmlFor={vibeId} className="text-sm font-medium text-slate-700 dark:text-slate-200">
-            Vibe
-          </label>
-          <select
-            id={vibeId}
-            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
-            value={formState.vibe}
-            onChange={(event) =>
-              setFormState((prev) => ({ ...prev, vibe: event.target.value }))
-            }
-          >
-            {VIBES.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="grid gap-2">
-          <label
-            htmlFor={peopleId}
-            className="text-sm font-medium text-slate-700 dark:text-slate-200"
-          >
-            People
-          </label>
-          <input
-            id={peopleId}
-            min={1}
-            max={16}
-            type="number"
-            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
-            value={formState.people}
-            onChange={(event) =>
-              setFormState((prev) => ({
-                ...prev,
-                people: Number(event.target.value)
-              }))
-            }
-          />
-        </div>
-
         <fieldset className="grid gap-3">
           <legend className="text-sm font-medium text-slate-700 dark:text-slate-200">
             Dietary filters
@@ -180,25 +130,6 @@ export function SearchForm({
             value={formState.have}
             onChange={(event) =>
               setFormState((prev) => ({ ...prev, have: event.target.value }))
-            }
-          />
-        </div>
-
-        <div className="grid gap-2">
-          <label
-            htmlFor={excludeId}
-            className="text-sm font-medium text-slate-700 dark:text-slate-200"
-          >
-            Exclude ingredients
-          </label>
-          <input
-            id={excludeId}
-            type="text"
-            placeholder="comma-separated, e.g., dairy, peanuts"
-            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
-            value={formState.exclude}
-            onChange={(event) =>
-              setFormState((prev) => ({ ...prev, exclude: event.target.value }))
             }
           />
         </div>
