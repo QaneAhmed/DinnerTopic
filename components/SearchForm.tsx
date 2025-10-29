@@ -78,7 +78,7 @@ export function SearchForm({
           </label>
           <select
             id={vibeId}
-            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-900"
+            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
             value={formState.vibe}
             onChange={(event) =>
               setFormState((prev) => ({ ...prev, vibe: event.target.value }))
@@ -104,7 +104,7 @@ export function SearchForm({
             min={1}
             max={16}
             type="number"
-            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-900"
+            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
             value={formState.people}
             onChange={(event) =>
               setFormState((prev) => ({
@@ -157,7 +157,7 @@ export function SearchForm({
             id={queryId}
             type="text"
             placeholder="Search recipes (e.g., “creamy tomato pasta”)"
-            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-900"
+            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
             value={formState.query}
             onChange={(event) =>
               setFormState((prev) => ({ ...prev, query: event.target.value }))
@@ -176,7 +176,7 @@ export function SearchForm({
             id={haveId}
             type="text"
             placeholder="comma-separated, e.g., chickpeas, spinach, lemons"
-            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-900"
+            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
             value={formState.have}
             onChange={(event) =>
               setFormState((prev) => ({ ...prev, have: event.target.value }))
@@ -195,7 +195,7 @@ export function SearchForm({
             id={excludeId}
             type="text"
             placeholder="comma-separated, e.g., dairy, peanuts"
-            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-900"
+            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
             value={formState.exclude}
             onChange={(event) =>
               setFormState((prev) => ({ ...prev, exclude: event.target.value }))
