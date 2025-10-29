@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import useSWR from "swr";
 import { ConversationPanel } from "./ConversationPanel";
 import { IngredientSwap } from "./IngredientSwap";
@@ -41,6 +41,7 @@ export function RecipeDrawer({ recipeId, open, onClose, vibe, people }: RecipeDr
   const [hashes, setHashes] = useState<string[]>([]);
   const [topicsLoading, setTopicsLoading] = useState(false);
   const [topicsError, setTopicsError] = useState<string | null>(null);
+  const hashesRef = useRef<string[]>([]);
 
   const dietFilters = useMemo(() => recipe?.dietFlags ?? [], [recipe?.dietFlags]);
 
@@ -59,7 +60,7 @@ export function RecipeDrawer({ recipeId, open, onClose, vibe, people }: RecipeDr
             recipe,
             vibe,
             people,
-            previousHashes: resetHashes ? [] : hashes
+            previousHashes: resetHashes ? [] : hashesRef.current
           })
         });
         if (!response.ok) throw new Error(`Topic generation failed: ${response.status}`);
@@ -68,11 +69,14 @@ export function RecipeDrawer({ recipeId, open, onClose, vibe, people }: RecipeDr
           fun_fact: string;
           hashes?: string[];
         };
-        setTopics({
+        const nextTopics = {
           starters: payload.starters,
           fun_fact: payload.fun_fact
-        });
-        setHashes(payload.hashes ?? []);
+        };
+        setTopics(nextTopics);
+        const nextHashes = payload.hashes ?? [];
+        hashesRef.current = nextHashes;
+        setHashes(nextHashes);
       } catch (err) {
         console.error(err);
         setTopicsError("We’ll riff on house topics while the AI rests.");
@@ -80,13 +84,14 @@ export function RecipeDrawer({ recipeId, open, onClose, vibe, people }: RecipeDr
         setTopicsLoading(false);
       }
     },
-    [recipe, vibe, people, hashes]
+    [recipe, vibe, people]
   );
 
   useEffect(() => {
     if (!open) {
       setTopics(null);
       setHashes([]);
+      hashesRef.current = [];
       setTopicsError(null);
     }
   }, [open]);
