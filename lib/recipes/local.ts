@@ -46,6 +46,13 @@ export class LocalRecipeProvider implements RecipeProvider {
       if (exclude.length && !matchesExclusions(recipe, exclude)) {
         return false;
       }
+      if (have.length) {
+        const ingredientHaystack = recipe.ingredients.map((item) => item.toLowerCase());
+        const satisfiesAll = have.every((token) =>
+          ingredientHaystack.some((ingredient) => ingredient.includes(token))
+        );
+        if (!satisfiesAll) return false;
+      }
       if (!q || !respectQuery) return true;
       const haystack = [
         recipe.title,
