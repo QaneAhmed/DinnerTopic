@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import useSWR from "swr";
 import { SearchForm, type SearchFilters } from "@/components/SearchForm";
@@ -40,6 +40,14 @@ const fetcher = async (url: string): Promise<SearchResponse> => {
 };
 
 export default function HomePage() {
+  return (
+    <Suspense fallback={<HomePageSkeleton />}>
+      <HomePageContent />
+    </Suspense>
+  );
+}
+
+function HomePageContent() {
   const router = useRouter();
   const params = useSearchParams();
   const pathname = usePathname();
@@ -179,4 +187,28 @@ function toList(value: string): string[] {
     .map((item) => item.trim())
     .filter(Boolean)
     .slice(0, 30);
+}
+
+function HomePageSkeleton() {
+  return (
+    <main className="relative hero-glow mx-auto max-w-5xl space-y-6 px-4 py-8" aria-busy="true">
+      <section className="fade-in mb-2 space-y-3 text-center">
+        <div className="mx-auto h-10 w-3/4 animate-pulse rounded bg-zinc-800/60" />
+        <div className="mx-auto h-4 w-2/3 animate-pulse rounded bg-zinc-800/60" />
+      </section>
+      <section className="surface space-y-3 p-6 md:p-8">
+        <div className="h-10 animate-pulse rounded-lg bg-zinc-800/60" />
+        <div className="h-10 animate-pulse rounded-lg bg-zinc-800/60" />
+        <div className="flex gap-3">
+          <div className="h-9 w-28 animate-pulse rounded-full bg-zinc-800/60" />
+          <div className="h-9 w-28 animate-pulse rounded-full bg-zinc-800/60" />
+        </div>
+      </section>
+      <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3 max-w-screen-lg mx-auto">
+        {Array.from({ length: 6 }).map((_, index) => (
+          <div key={index} className="h-72 animate-pulse rounded-2xl border border-zinc-800/60 bg-zinc-900/40" />
+        ))}
+      </div>
+    </main>
+  );
 }
