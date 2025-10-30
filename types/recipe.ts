@@ -18,6 +18,9 @@ export type RecipeSummary = {
   dietFlags: DietFlag[];
   tags: string[];
   matchScore?: number;
+  offTitle?: string;
+  offStarters?: string[];
+  offFunFact?: string;
 };
 
 export type RecipeDetail = RecipeSummary & {

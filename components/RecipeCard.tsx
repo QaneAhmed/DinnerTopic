@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useState, type FocusEvent } from "react";
+import { useEffect, useState, type FocusEvent, type KeyboardEvent, type MouseEvent } from "react";
 import type { RecipeSummary } from "@/types/recipe";
-import { cx } from "@/lib/ui";
 
 export type PeekTopics = {
   starters: string[];
@@ -10,23 +9,45 @@ export type PeekTopics = {
 };
 
 type RecipeCardProps = {
-  recipe: RecipeSummary;
+  recipe: RecipeSummary & {
+    offTitle?: string;
+    offStarters?: string[];
+    offFunFact?: string;
+  };
   onOpen: (recipe: RecipeSummary, preview?: PeekTopics | null) => void;
   initialPreview?: PeekTopics | null;
+  off?: boolean;
 };
 
-export function RecipeCard({ recipe, onOpen, initialPreview = null }: RecipeCardProps) {
+export function RecipeCard({
+  recipe,
+  onOpen,
+  initialPreview = null,
+  off = false
+}: RecipeCardProps) {
   const [peek, setPeek] = useState<PeekTopics | null>(initialPreview);
   const [loadingPeek, setLoadingPeek] = useState(false);
   const [showPeek, setShowPeek] = useState(false);
 
   useEffect(() => {
-    if (initialPreview) {
-      setPeek(initialPreview);
-    }
+    setPeek(initialPreview ?? null);
   }, [initialPreview]);
 
+  useEffect(() => {
+    if (off) {
+      setShowPeek(false);
+    }
+  }, [off]);
+
+  const displayTitle = off ? recipe.offTitle ?? recipe.title : recipe.title;
+
   const loadPeek = async (force = false): Promise<PeekTopics | null> => {
+    if (off) {
+      if (!peek && initialPreview) {
+        setPeek(initialPreview);
+      }
+      return peek ?? initialPreview ?? null;
+    }
     if ((peek && !force) || loadingPeek) return peek;
     setLoadingPeek(true);
     let result: PeekTopics | null = null;
@@ -64,7 +85,7 @@ export function RecipeCard({ recipe, onOpen, initialPreview = null }: RecipeCard
 
   const handleOpen = () => {
     onOpen(recipe, peek ?? null);
-    if (!peek) {
+    if (!peek && !off) {
       void loadPeek(true).then((latest) => {
         if (latest) {
           onOpen(recipe, latest);
@@ -74,29 +95,65 @@ export function RecipeCard({ recipe, onOpen, initialPreview = null }: RecipeCard
   };
 
   const handleReveal = () => {
+    if (off) return;
     setShowPeek(true);
     void loadPeek();
   };
 
   const handleHide = () => {
+    if (off) return;
     setShowPeek(false);
   };
 
   const handleFocus = (event: FocusEvent<HTMLDivElement>) => {
+    if (off) return;
     if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
       handleReveal();
     }
   };
 
   const handleBlur = (event: FocusEvent<HTMLDivElement>) => {
+    if (off) return;
     if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
       handleHide();
     }
   };
 
+  const handleCardClick = (event: MouseEvent<HTMLDivElement>) => {
+    const target = event.target as HTMLElement;
+    if (target.closest("button")) return;
+    handleOpen();
+  };
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      handleOpen();
+    }
+  };
+
+  const previewContent = !off && showPeek && peek ? (
+    <div className="peek mt-3 rounded-xl border border-zinc-800 bg-zinc-950/70 p-3">
+      <p className="mb-1 text-xs uppercase tracking-wide text-indigo-300">Conversation preview</p>
+      <ul className="list-disc space-y-1 pl-5 text-sm text-zinc-200">
+        {(peek?.starters ?? []).slice(0, 2).map((starter, index) => (
+          <li key={index}>{starter}</li>
+        ))}
+      </ul>
+      <p className="mt-2 text-xs text-zinc-500">
+        {loadingPeek ? "Loading more ideas…" : "+ more when you open the recipe"}
+      </p>
+    </div>
+  ) : null;
+
   return (
     <div
-      className="group surface hover-lift p-4 focus-within:ring-2 focus-within:ring-accent-400/50"
+      className="group surface hover-lift p-4 focus-within:ring-2 focus-within:ring-accent-400/50 card-col"
+      role="button"
+      aria-label={`Open ${displayTitle}`}
+      tabIndex={0}
+      onClick={handleCardClick}
+      onKeyDown={handleKeyDown}
       onMouseEnter={handleReveal}
       onMouseLeave={handleHide}
       onFocus={handleFocus}
@@ -104,27 +161,21 @@ export function RecipeCard({ recipe, onOpen, initialPreview = null }: RecipeCard
       onTouchStart={handleReveal}
       onTouchEnd={handleHide}
     >
-      <div className="flex flex-col gap-3">
+      <div className="card-main">
         <div className="flex items-start justify-between gap-3">
           <h3 className="cursor-pointer text-lg font-semibold text-zinc-100 transition-colors group-hover:text-accent-300">
-            <button type="button" onClick={handleOpen} className="text-left">
-              {recipe.title}
-            </button>
+            {displayTitle}
           </h3>
-        </div>
-        <div className="flex items-center justify-between text-xs text-zinc-400">
-          {recipe.timeMinutes ? (
-            <span className="badge badge-time">{recipe.timeMinutes} min</span>
-          ) : (
-            <span />
-          )}
           {recipe.matchScore !== undefined && (
             <span className="text-[11px] uppercase tracking-wide text-zinc-500">
               Match {Math.round(recipe.matchScore * 100)}%
             </span>
           )}
         </div>
-        <p className="line-clamp-2 text-sm subtle">{recipe.description}</p>
+        {recipe.description && <p className="text-sm subtle line-clamp-2">{recipe.description}</p>}
+        <div className="flex items-center justify-between text-xs text-zinc-400">
+          <span className="badge badge-time">{recipe.timeMinutes ?? 0} min</span>
+        </div>
         <div className="flex flex-wrap gap-2 text-xs text-zinc-400">
           {recipe.cuisine && <span className="badge">{recipe.cuisine}</span>}
           {recipe.dietFlags.slice(0, 2).map((flag) => (
@@ -133,29 +184,24 @@ export function RecipeCard({ recipe, onOpen, initialPreview = null }: RecipeCard
             </span>
           ))}
         </div>
+
+        <div className="card-spacer" />
+        <div className="preview-reserved">{previewContent}</div>
+      </div>
+
+      <div className="card-footer">
         <button
           type="button"
-          onClick={handleOpen}
-          className={cx("btn-ghost mt-2 px-3 py-1 text-sm")}
-          aria-label={`See conversation topics for ${recipe.title}`}
+          onClick={(event) => {
+            event.stopPropagation();
+            handleOpen();
+          }}
+          className="btn-ghost w-full justify-center text-sm"
+          aria-label={`See conversation topics for ${displayTitle}`}
         >
           💬 See topics for this dish
         </button>
       </div>
-
-      {showPeek && peek && (
-        <div className="peek mt-3 rounded-xl border border-zinc-800 bg-zinc-950/70 p-3">
-          <p className="mb-1 text-xs uppercase tracking-wide text-indigo-300">Conversation preview</p>
-          <ul className="list-disc space-y-1 pl-5 text-sm text-zinc-200">
-            {(peek?.starters ?? []).slice(0, 2).map((starter, index) => (
-              <li key={index}>{starter}</li>
-            ))}
-          </ul>
-          <p className="mt-2 text-xs text-zinc-500">
-            {loadingPeek ? "Loading more ideas…" : "+ more when you open the recipe"}
-          </p>
-        </div>
-      )}
     </div>
   );
 }

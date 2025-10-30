@@ -95,6 +95,16 @@ html, body { @apply bg-app-bg text-zinc-100 antialiased scroll-smooth; }
 }
 .step-body { @apply flex-1 text-sm leading-relaxed text-zinc-100; }
 
+/* --- Card vertical layout helpers --- */
+.card-col { @apply flex h-full flex-col; }
+.card-main { @apply grow flex flex-col gap-2; }
+.card-spacer { @apply grow; }
+.card-footer { @apply mt-auto pt-3; }
+
+.preview-reserved { @apply min-h-[88px]; }
+
+[data-offtable="true"] .peek { display: none !important; }
+
 /* Accessibility focus */
 :focus-visible { @apply outline-none ring-2 ring-accent-400/50 rounded-xl; }
 

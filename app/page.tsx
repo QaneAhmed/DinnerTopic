@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import useSWR from "swr";
 import { SearchForm, type SearchFilters } from "@/components/SearchForm";
 import { RecipeGrid } from "@/components/RecipeGrid";
@@ -39,6 +40,10 @@ const fetcher = async (url: string): Promise<SearchResponse> => {
 };
 
 export default function HomePage() {
+  const router = useRouter();
+  const params = useSearchParams();
+  const pathname = usePathname();
+
   const [filters, setFilters] = useState<SearchFilters>(defaultFilters);
   const [submitted, setSubmitted] = useState<SearchFilters>(defaultFilters);
   const [selectedRecipe, setSelectedRecipe] = useState<RecipeSummary | null>(null);
@@ -49,6 +54,19 @@ export default function HomePage() {
   const { data, error, isLoading } = useSWR<SearchResponse>(searchKey, fetcher, {
     revalidateOnFocus: false
   });
+
+  const offTableMode = params.get("off") === "1";
+
+  const toggleOffTableMode = () => {
+    const query = new URLSearchParams(Array.from(params.entries()));
+    if (offTableMode) {
+      query.delete("off");
+    } else {
+      query.set("off", "1");
+    }
+    const queryString = query.toString();
+    router.push(queryString ? `${pathname}?${queryString}` : pathname, { scroll: false });
+  };
 
   const results = data?.results ?? [];
 
@@ -72,7 +90,10 @@ export default function HomePage() {
   };
 
   return (
-    <main className="relative hero-glow mx-auto max-w-5xl space-y-6 px-4 py-8">
+    <main
+      data-offtable={offTableMode ? "true" : "false"}
+      className="relative hero-glow mx-auto max-w-5xl space-y-6 px-4 py-8"
+    >
       <section className="fade-in mb-2 space-y-3 text-center">
         <h1 className="h1">
           Find dinner you’ll love <span className="text-gradient">and what to talk about.</span>
@@ -94,14 +115,30 @@ export default function HomePage() {
         </section>
       </TopicOnlyPanel>
       <div className="fade-in">
-        <div className="mx-auto flex max-w-screen-lg flex-wrap items-center gap-3 rounded-2xl border border-zinc-800/60 bg-zinc-900/60 px-4 py-2 text-[11px] uppercase tracking-wide text-zinc-400">
-          {results.length > 0 && <span>{results.length} match{results.length === 1 ? "" : "es"}</span>}
-          {submitted.query && <span>Query: {submitted.query}</span>}
+        <div className="mx-auto flex max-w-screen-lg flex-wrap items-center justify-between gap-3 rounded-2xl border border-zinc-800/60 bg-zinc-900/60 px-4 py-2 text-[11px] uppercase tracking-wide text-zinc-400">
+          <div className="flex flex-wrap items-center gap-3">
+            {results.length > 0 && (
+              <span>
+                {results.length} match{results.length === 1 ? "" : "es"}
+              </span>
+            )}
+            {submitted.query && <span>Query: {submitted.query}</span>}
+          </div>
+          <button
+            type="button"
+            onClick={toggleOffTableMode}
+            className={`btn-ghost text-xs ${offTableMode ? "border-accent-400 text-accent-300" : ""}`}
+            aria-pressed={offTableMode}
+            title="Toggle Off-Table Mode (cheeky titles, hover previews disabled)"
+          >
+            🙊 Off-Table Mode
+          </button>
         </div>
       </div>
 
       <section className="fade-in">
         <RecipeGrid
+          off={offTableMode}
           loading={isLoading}
           error={error ? "We couldn’t reach the kitchen. Try again shortly." : undefined}
           results={results}
@@ -113,6 +150,7 @@ export default function HomePage() {
       </section>
 
       <RecipeDrawer
+        off={offTableMode}
         recipeId={selectedRecipe?.id ?? null}
         open={Boolean(selectedRecipe)}
         onClose={() => {
@@ -120,6 +158,7 @@ export default function HomePage() {
           setSelectedPreview(null);
         }}
         initialTopics={selectedPreview}
+        summary={selectedRecipe}
       />
     </main>
   );

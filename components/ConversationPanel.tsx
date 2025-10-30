@@ -10,12 +10,14 @@ type ConversationPanelProps = {
     fun_fact: string;
   } | null;
   onRegenerate: () => Promise<void> | void;
+  off?: boolean;
 };
 
 export function ConversationPanel({
   loading,
   topics,
-  onRegenerate
+  onRegenerate,
+  off = false
 }: ConversationPanelProps) {
   const [copied, setCopied] = useState(false);
 
@@ -80,14 +82,17 @@ export function ConversationPanel({
       </div>
       <button
         type="button"
-        onClick={() => onRegenerate()}
-        disabled={loading}
+        onClick={() => {
+          if (off) return;
+          return onRegenerate();
+        }}
+        disabled={loading || off}
         className={clsx(
           "btn-primary w-full justify-center",
-          loading && "cursor-progress opacity-60"
+          (loading || off) && "cursor-not-allowed opacity-60"
         )}
       >
-        {loading ? "Refreshing…" : "New topics"}
+        {off ? "Off-Table Mode active" : loading ? "Refreshing…" : "New topics"}
       </button>
     </aside>
   );

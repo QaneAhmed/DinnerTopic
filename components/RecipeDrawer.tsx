@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import useSWR from "swr";
 import { ConversationPanel } from "./ConversationPanel";
 import { IngredientSwap } from "./IngredientSwap";
-import type { RecipeDetail } from "@/types/recipe";
+import type { RecipeDetail, RecipeSummary } from "@/types/recipe";
 import { hashString } from "@/lib/utils";
 
 type RecipeDrawerProps = {
@@ -12,6 +12,8 @@ type RecipeDrawerProps = {
   open: boolean;
   onClose: () => void;
   initialTopics?: { starters: string[]; fun_fact: string } | null;
+  off?: boolean;
+  summary?: RecipeSummary | null;
 };
 
 type RecipeResponse = {
@@ -29,7 +31,14 @@ const fetcher = async (url: string): Promise<RecipeResponse> => {
 const DEFAULT_VIBE = "Friends";
 const DEFAULT_PEOPLE = 4;
 
-export function RecipeDrawer({ recipeId, open, onClose, initialTopics }: RecipeDrawerProps) {
+export function RecipeDrawer({
+  recipeId,
+  open,
+  onClose,
+  initialTopics,
+  off = false,
+  summary = null
+}: RecipeDrawerProps) {
   const { data, error, isLoading } = useSWR<RecipeResponse>(
     open && recipeId ? `/api/recipes/${encodeURIComponent(recipeId)}` : null,
     fetcher,
@@ -47,9 +56,13 @@ export function RecipeDrawer({ recipeId, open, onClose, initialTopics }: RecipeD
   const hashesRef = useRef<string[]>([]);
 
   const dietFilters = useMemo(() => recipe?.dietFlags ?? [], [recipe?.dietFlags]);
+  const displayTitle = off
+    ? summary?.offTitle ?? recipe?.title ?? summary?.title ?? ""
+    : recipe?.title ?? summary?.title ?? "";
 
   const loadTopics = useCallback(
     async (resetHashes: boolean) => {
+      if (off) return;
       if (!recipe) return;
       setTopicsLoading(true);
       setTopicsError(null);
@@ -87,17 +100,27 @@ export function RecipeDrawer({ recipeId, open, onClose, initialTopics }: RecipeD
         setTopicsLoading(false);
       }
     },
-    [recipe]
+    [off, recipe]
   );
 
+useEffect(() => {
+  if (!open) {
+    setTopics(null);
+    setHashes([]);
+    hashesRef.current = [];
+    setTopicsError(null);
+  }
+}, [open]);
+
   useEffect(() => {
-    if (!open) {
-      setTopics(null);
-      setHashes([]);
-      hashesRef.current = [];
+    if (off) {
+      if (initialTopics) {
+        setTopics(initialTopics);
+      }
+      setTopicsLoading(false);
       setTopicsError(null);
     }
-  }, [open]);
+  }, [off, initialTopics]);
 
   useEffect(() => {
     if (!open) return;
@@ -112,12 +135,13 @@ export function RecipeDrawer({ recipeId, open, onClose, initialTopics }: RecipeD
   }, [initialTopics, open]);
 
   useEffect(() => {
+    if (off) return;
     if (open && recipe) {
       if (!initialTopics) {
         loadTopics(true);
       }
     }
-  }, [open, recipe, loadTopics, initialTopics]);
+  }, [off, open, recipe, loadTopics, initialTopics]);
 
   useEffect(() => {
     const handleKey = (event: KeyboardEvent) => {
@@ -181,9 +205,10 @@ export function RecipeDrawer({ recipeId, open, onClose, initialTopics }: RecipeD
                   <p className="text-xs font-semibold uppercase tracking-wide text-accent-300">
                     {recipe.cuisine}
                   </p>
-                  <h2 className="text-2xl font-semibold text-zinc-100">
-                    {recipe.title}
-                  </h2>
+                  <h2 className="text-2xl font-semibold text-zinc-100">{displayTitle}</h2>
+                  {off && (
+                    <p className="text-xs meta">🙊 Off-Table Mode — cheeky titles, hover previews disabled</p>
+                  )}
                   <p className="text-sm text-zinc-300">
                     {recipe.description}
                   </p>
@@ -249,6 +274,7 @@ export function RecipeDrawer({ recipeId, open, onClose, initialTopics }: RecipeD
               loading={topicsLoading}
               topics={topics}
               onRegenerate={() => loadTopics(false)}
+              off={off}
             />
           </div>
         </div>
