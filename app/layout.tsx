@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#312e81"
+  themeColor: "#0e0e12"
 };
 
 type RootLayoutProps = {
@@ -22,8 +22,8 @@ type RootLayoutProps = {
 
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
-    <html lang="en" className="min-h-full bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-      <body className="min-h-screen bg-gradient-to-b from-slate-50/80 via-white to-slate-100/60 font-sans antialiased dark:from-slate-950 dark:via-slate-950 dark:to-slate-900">
+    <html lang="en">
+      <body className="min-h-screen bg-app-bg text-zinc-100">
         <div className="mx-auto flex min-h-screen max-w-6xl flex-col gap-10 px-4 py-10 sm:px-6 lg:px-10">
           {children}
         </div>

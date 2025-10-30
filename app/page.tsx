@@ -6,6 +6,7 @@ import { SearchForm, type SearchFilters } from "@/components/SearchForm";
 import { RecipeGrid } from "@/components/RecipeGrid";
 import { RecipeDrawer } from "@/components/RecipeDrawer";
 import type { RecipeSummary } from "@/types/recipe";
+import TopicOnlyPanel from "@/components/TopicOnlyPanel";
 
 const defaultFilters: SearchFilters = {
   diets: [],
@@ -41,6 +42,7 @@ export default function HomePage() {
   const [filters, setFilters] = useState<SearchFilters>(defaultFilters);
   const [submitted, setSubmitted] = useState<SearchFilters>(defaultFilters);
   const [selectedRecipe, setSelectedRecipe] = useState<RecipeSummary | null>(null);
+  const [selectedPreview, setSelectedPreview] = useState<{ starters: string[]; fun_fact: string } | null>(null);
 
   const searchKey = useMemo(() => buildSearchKey(submitted), [submitted]);
 
@@ -70,50 +72,54 @@ export default function HomePage() {
   };
 
   return (
-    <main className="flex flex-1 flex-col gap-10">
-      <header className="space-y-3 text-center sm:space-y-4">
-        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-indigo-500 dark:text-indigo-300">
-          SupperTalk
-        </p>
-        <h1 className="text-3xl font-semibold text-slate-900 sm:text-4xl dark:text-white">
-          Plan dinner, spark the conversation
+    <main className="relative hero-glow mx-auto max-w-5xl space-y-6 px-4 py-8">
+      <section className="fade-in mb-2 space-y-3 text-center">
+        <h1 className="h1">
+          Find dinner you’ll love <span className="text-gradient">and what to talk about.</span>
         </h1>
-        <p className="mx-auto max-w-2xl text-sm text-slate-600 dark:text-slate-300">
-          Search recipes by cravings, pantry staples, or dietary needs. Open a dish to get
-          three ready-to-go conversation starters and a fun food fact, all tuned to your vibe.
+        <p className="mx-auto max-w-2xl text-base subtle">
+          Search recipes, then get 3 conversation starters and 1 fun fact tailored to the dish.
         </p>
-      </header>
+      </section>
 
-      <SearchForm
-        value={filters}
-        loading={isLoading}
-        onSubmit={handleSubmit}
-        onSurprise={(current) => handleSurprise(current)}
-      />
-
-      <section className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100">
-            {results.length ? `Showing ${results.length} dishes` : "Browse ideas"}
-          </h2>
-          {submitted.query && (
-            <span className="text-xs font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">
-              Query: {submitted.query}
-            </span>
-          )}
+      <TopicOnlyPanel>
+        <section className="surface fade-in space-y-4 p-6 md:p-8">
+          <SearchForm
+            value={filters}
+            loading={isLoading}
+            onSubmit={handleSubmit}
+            onSurprise={(current) => handleSurprise(current)}
+            extraAction={<TopicOnlyPanel.Trigger />}
+          />
+        </section>
+      </TopicOnlyPanel>
+      <div className="fade-in">
+        <div className="mx-auto flex max-w-screen-lg flex-wrap items-center gap-3 rounded-2xl border border-zinc-800/60 bg-zinc-900/60 px-4 py-2 text-[11px] uppercase tracking-wide text-zinc-400">
+          {results.length > 0 && <span>{results.length} match{results.length === 1 ? "" : "es"}</span>}
+          {submitted.query && <span>Query: {submitted.query}</span>}
         </div>
+      </div>
+
+      <section className="fade-in">
         <RecipeGrid
           loading={isLoading}
           error={error ? "We couldn’t reach the kitchen. Try again shortly." : undefined}
           results={results}
-          onSelect={setSelectedRecipe}
+          onSelect={(recipe, preview) => {
+            setSelectedRecipe(recipe);
+            setSelectedPreview(preview ?? null);
+          }}
         />
       </section>
 
       <RecipeDrawer
         recipeId={selectedRecipe?.id ?? null}
         open={Boolean(selectedRecipe)}
-        onClose={() => setSelectedRecipe(null)}
+        onClose={() => {
+          setSelectedRecipe(null);
+          setSelectedPreview(null);
+        }}
+        initialTopics={selectedPreview}
       />
     </main>
   );

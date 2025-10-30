@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useId, useState } from "react";
+import { FormEvent, ReactNode, useEffect, useId, useState } from "react";
 import clsx from "clsx";
 
 export type SearchFilters = {
@@ -25,13 +25,15 @@ type SearchFormProps = {
   loading?: boolean;
   onSubmit: (filters: SearchFilters) => void;
   onSurprise: (filters: SearchFilters) => void;
+  extraAction?: ReactNode;
 };
 
 export function SearchForm({
   value,
   loading = false,
   onSubmit,
-  onSurprise
+  onSurprise,
+  extraAction
 }: SearchFormProps) {
   const [formState, setFormState] = useState<SearchFilters>(value);
   const dietsId = useId();
@@ -60,13 +62,10 @@ export function SearchForm({
   };
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="rounded-3xl border border-slate-200 bg-white/80 p-6 shadow-sm backdrop-blur-md transition-all dark:border-slate-800 dark:bg-slate-900/80"
-    >
+    <form onSubmit={handleSubmit} className="space-y-5">
       <div className="grid gap-5">
         <fieldset className="grid gap-3">
-          <legend className="text-sm font-medium text-slate-700 dark:text-slate-200">
+          <legend className="text-sm font-medium text-zinc-100">
             Dietary filters
           </legend>
           <div
@@ -81,10 +80,10 @@ export function SearchForm({
                   type="button"
                   key={diet}
                   className={clsx(
-                    "rounded-full border px-3 py-1 text-xs font-medium transition-all",
+                    "badge text-[12px] transition focus-visible:ring-2 focus-visible:ring-accent-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-app-bg",
                     active
-                      ? "border-indigo-500 bg-indigo-500 text-white shadow"
-                      : "border-slate-300 bg-white text-slate-700 hover:border-indigo-400 hover:text-indigo-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                      ? "badge-active !text-white"
+                      : "border-zinc-700/70 text-zinc-400 hover:border-accent-500 hover:text-accent-300"
                   )}
                   aria-pressed={active}
                   onClick={() => toggleDiet(diet)}
@@ -99,7 +98,7 @@ export function SearchForm({
         <div className="grid gap-2">
           <label
             htmlFor={queryId}
-            className="text-sm font-medium text-slate-700 dark:text-slate-200"
+            className="text-sm font-medium text-zinc-100"
           >
             Recipe query
           </label>
@@ -107,7 +106,7 @@ export function SearchForm({
             id={queryId}
             type="text"
             placeholder="Search recipes (e.g., “creamy tomato pasta”)"
-            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+            className="input"
             value={formState.query}
             onChange={(event) =>
               setFormState((prev) => ({ ...prev, query: event.target.value }))
@@ -118,7 +117,7 @@ export function SearchForm({
         <div className="grid gap-2">
           <label
             htmlFor={haveId}
-            className="text-sm font-medium text-slate-700 dark:text-slate-200"
+            className="text-sm font-medium text-zinc-100"
           >
             Ingredients you have
           </label>
@@ -126,7 +125,7 @@ export function SearchForm({
             id={haveId}
             type="text"
             placeholder="comma-separated, e.g., chickpeas, spinach, lemons"
-            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+            className="input"
             value={formState.have}
             onChange={(event) =>
               setFormState((prev) => ({ ...prev, have: event.target.value }))
@@ -134,22 +133,23 @@ export function SearchForm({
           />
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+        <div className="flex flex-wrap items-center gap-3 pt-1">
+          <button
+            type="submit"
+            disabled={loading}
+            className="btn-primary disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {loading ? "Finding dishes…" : "Search"}
+          </button>
           <button
             type="button"
-            className="text-sm font-semibold text-indigo-600 transition hover:text-indigo-500 dark:text-indigo-300 dark:hover:text-indigo-200"
+            className="btn-secondary disabled:opacity-60"
             onClick={() => onSurprise(formState)}
             disabled={loading}
           >
             Surprise me
           </button>
-          <button
-            type="submit"
-            disabled={loading}
-            className="inline-flex items-center gap-2 rounded-full bg-indigo-600 px-5 py-2 text-sm font-semibold text-white shadow-md transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:bg-indigo-300"
-          >
-            {loading ? "Finding dishes…" : "Search"}
-          </button>
+          {extraAction}
         </div>
       </div>
     </form>

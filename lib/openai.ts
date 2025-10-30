@@ -5,7 +5,7 @@ import type {
   TopicsRequestBody,
   TopicsResponseBody
 } from "@/types/api";
-import { formatList, hashString } from "./utils";
+import { formatList, hashString, sample } from "./utils";
 
 const apiKey = process.env.OPENAI_API_KEY;
 
@@ -158,13 +158,65 @@ function parseTopics(content: unknown): TopicsResponseBody | null {
 function buildTopicsFallback(payload: TopicsRequestBody): TopicsResponseBody {
   const { recipe, vibe } = payload;
   const focusIngredient =
-    "ingredients" in recipe ? recipe.ingredients.slice(0, 3).join(", ") : recipe.title;
+    "ingredients" in recipe && recipe.ingredients.length
+      ? recipe.ingredients.slice(0, 3).join(", ")
+      : recipe.tags?.slice(0, 3).join(", ") || recipe.title;
+
+  const vibeKey = vibe.toLowerCase();
+  const templates: Record<string, string[]> = {
+    friends: [
+      `What story about ${recipe.title} would make everyone laugh tonight?`,
+      `Who in the group would host the next ${recipe.cuisine} night and what twist would they add?`,
+      `If this ${recipe.title} became a standing tradition, what inside joke would it inspire?`
+    ],
+    family: [
+      `Ask who in the family first fell for ${recipe.title} and why it stuck.`,
+      `If ${recipe.title} were on every holiday table, what “family rule” would we create?`,
+      `What memory from home does the aroma of ${focusIngredient} bring back?`
+    ],
+    date: [
+      `What part of ${recipe.cuisine} feels most romantic to you—flavors, ambiance, or rituals?`,
+      `If we planned a getaway inspired by ${recipe.title}, where are we going and what’s on the menu?`,
+      `What small gesture would you pair with serving ${recipe.title} to make the night memorable?`
+    ],
+    colleagues: [
+      `If ${recipe.title} kicked off a team retreat, what breakout session would you lead afterwards?`,
+      `Who on the team would secretly crush a ${recipe.cuisine} cooking competition and why?`,
+      `What work challenge would you toast to after sharing ${recipe.title}?`
+    ],
+    kids: [
+      `If ${recipe.title} were a superhero, what powers would the ${focusIngredient} give it?`,
+      `What silly name would you give this dish to convince everyone to try it?`,
+      `If you opened a café serving ${recipe.cuisine}, what games or surprises would you add for guests?`
+    ]
+  };
+
+  const vibeStarters = templates[vibeKey] ?? templates.friends;
   const starters = [
-    `Ask which memory this ${recipe.cuisine} classic stirs up while everyone samples the ${recipe.title}.`,
-    `Invite the table to guess which ingredient—${focusIngredient}—makes ${recipe.title} shine.`,
-    `If we hosted a ${vibe.toLowerCase()} dinner around ${recipe.title} every year, what new ritual would we add next time?`
+    sample(vibeStarters),
+    sample(
+      [
+        `Which part of ${recipe.title}—${focusIngredient} or the way it’s served—steals the spotlight?`,
+        `What playlist or movie would you pair with a night centered on ${recipe.title}?`,
+        `If ${recipe.title} could speak, what story from ${recipe.cuisine} would it share with the table?`
+      ],
+      `What new twist would you add to ${recipe.title} to make it unforgettable?`
+    ),
+    sample(
+      [
+        `How would a ${vibe.toLowerCase()} dinner change if we swapped ${focusIngredient} for something unexpected?`,
+        `What’s the most surprising conversation you’ve had over a ${recipe.cuisine} meal?`,
+        `If we wrote a postcard about tonight’s ${recipe.title}, what flavor moment would we highlight?`
+      ],
+      `If we turned ${recipe.title} into a ritual, what heartfelt detail should never change?`
+    )
   ];
-  const fun_fact = `${recipe.cuisine} cooks often say balance is everything—${recipe.title} delivers it in every bite.`;
+  const funFacts = [
+    `${recipe.cuisine} cooks often say balance is everything—${recipe.title} delivers it in every bite.`,
+    `Many ${recipe.cuisine} staples began as humble, thrifty meals; ${recipe.title} is tradition with flair.`,
+    `Serving ${recipe.title} is a nod to how ${recipe.cuisine} celebrates community around the table.`
+  ];
+  const fun_fact = sample(funFacts);
   const hashes = [...starters, fun_fact].map(hashString);
   return {
     starters,

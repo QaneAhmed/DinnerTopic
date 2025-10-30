@@ -58,18 +58,18 @@ export function IngredientSwap({
   if (!suggestions.length) return null;
 
   return (
-    <div className="mt-1 text-xs text-indigo-600">
+    <div className="mt-1 text-xs text-accent-200">
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
-        className="rounded-full border border-indigo-100 px-3 py-1 text-xs font-semibold text-indigo-600 transition hover:border-indigo-300 hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-indigo-500/40 dark:text-indigo-300"
+        className="inline-flex items-center gap-1 rounded-full border border-accent-500/40 bg-zinc-900/70 px-3 py-1 text-xs font-semibold text-accent-200 transition hover:border-accent-300 hover:text-white focus:outline-none focus:ring-2 focus:ring-accent-500"
         aria-expanded={open}
       >
         Swap ingredient
       </button>
       {open && (
-        <div className="mt-2 space-y-2 rounded-2xl border border-slate-200 bg-white p-3 text-slate-600 shadow-md dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
-          <p className="text-xs font-semibold text-slate-500">
+        <div className="mt-2 space-y-2 rounded-2xl border border-zinc-800/70 bg-zinc-900/80 p-3 text-zinc-200 shadow-indigo-soft">
+          <p className="text-xs font-semibold text-accent-200">
             Alternatives for {ingredient}:
           </p>
           <div className="flex flex-col gap-2">
@@ -77,25 +77,25 @@ export function IngredientSwap({
               <button
                 key={option}
                 type="button"
-                className="rounded-xl border border-slate-200 px-3 py-2 text-left text-xs font-medium text-slate-600 transition hover:border-indigo-400 hover:text-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-slate-700 dark:text-slate-200"
+                className="rounded-xl border border-zinc-800/70 bg-zinc-950/70 px-3 py-2 text-left text-xs font-medium text-zinc-200 transition hover:border-accent-400 hover:text-accent-200 focus:outline-none focus:ring-2 focus:ring-accent-500"
                 onClick={() => chooseOption(option)}
                 disabled={loading}
               >
-                <span className="block font-semibold text-slate-700 dark:text-slate-100">
+                <span className="block font-semibold text-zinc-100">
                   {option}
                 </span>
-                {hint && <span className="block text-[11px] text-slate-500">{hint}</span>}
+                {hint && <span className="block text-[11px] text-zinc-400">{hint}</span>}
               </button>
             ))}
           </div>
-          {loading && <p className="text-[11px] text-slate-400">Drafting adjustment…</p>}
+          {loading && <p className="text-[11px] text-zinc-500">Drafting adjustment…</p>}
           {delta && !loading && (
-            <p className="rounded-xl bg-indigo-50 p-2 text-[11px] text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-200">
+            <p className="rounded-xl border border-accent-500/40 bg-accent-500/10 p-2 text-[11px] text-accent-200">
               {delta}
             </p>
           )}
           {error && (
-            <p className="text-[11px] text-rose-500 dark:text-rose-300">{error}</p>
+            <p className="text-[11px] text-rose-300">{error}</p>
           )}
         </div>
       )}

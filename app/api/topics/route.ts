@@ -5,7 +5,7 @@ import { generateTopics } from "@/lib/openai";
 import { rateLimit, getRateLimitHint } from "@/lib/rateLimit";
 
 const recipeSchema = z.object({
-  id: z.string().min(1),
+  id: z.string().min(1).optional(),
   title: z.string().min(1),
   description: z.string().default(""),
   image: z.string().default("/placeholder.jpg"),
@@ -18,10 +18,11 @@ const recipeSchema = z.object({
 });
 
 const bodySchema = z.object({
-  recipe: recipeSchema,
-  vibe: z.string().min(1).max(30),
-  people: z.number().int().min(1).max(16),
-  previousHashes: z.array(z.string()).optional()
+  recipe: recipeSchema.optional(),
+  vibe: z.string().min(1).max(30).default("Friends"),
+  people: z.number().int().min(1).max(16).default(2),
+  previousHashes: z.array(z.string()).optional(),
+  preview: z.boolean().optional()
 });
 
 export async function POST(request: Request) {
@@ -38,20 +39,44 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json().catch(() => null);
-  const parsed = bodySchema.safeParse(body);
+  const parsed = bodySchema.safeParse(body ?? {});
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid input" }, { status: 400 });
   }
 
+  const recipeDefaults = {
+    id: "preview",
+    description: "",
+    image: "/placeholder.jpg",
+    timeMinutes: 30,
+    cuisine: "Global",
+    dietFlags: [],
+    tags: [],
+    ingredients: [],
+    steps: []
+  };
+
   const normalizedPayload = {
     ...parsed.data,
     recipe: {
-      ...parsed.data.recipe,
-      dietFlags: normalizeDietFilters(parsed.data.recipe.dietFlags)
+      ...(parsed.data.recipe ?? { title: "Dinner", ...recipeDefaults }),
+      id: parsed.data.recipe?.id ?? "preview",
+      dietFlags: normalizeDietFilters(parsed.data.recipe?.dietFlags ?? [])
     }
   };
 
   try {
+    if (parsed.data.preview) {
+      const previewTopics = await generateTopics(normalizedPayload);
+      return NextResponse.json(
+        {
+          starters: previewTopics.starters.slice(0, 2),
+          fun_fact: previewTopics.fun_fact
+        },
+        { status: 200 }
+      );
+    }
+
     const topics = await generateTopics(normalizedPayload);
     return NextResponse.json(
       {
